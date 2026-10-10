@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' https: data:;"
+    />
+    <title>YTM Lyrics PiP</title>
+    <link rel="stylesheet" href="pip.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="bar">
+        <div id="meta">
+          <span id="title">—</span>
+          <span id="author"></span>
+        </div>
+        <div id="actions">
+          <span id="offset-group" class="group">
+            <button
+              id="btn-sync"
+              title="Caler ici (S) — appuie au moment où tu entends la ligne commencer"
+              aria-label="Caler les paroles sur ce que j'entends"
+            >⏱</button>
+            <button id="btn-offset-down" title="Paroles plus tard (−100 ms)" aria-label="Décaler les paroles plus tard">−</button>
+            <span id="offset-label" title="Décalage des paroles">0 ms</span>
+            <button id="btn-offset-up" title="Paroles plus tôt (+100 ms)" aria-label="Décaler les paroles plus tôt">+</button>
+            <span class="sep"></span>
+          </span>
+          <span id="transport" class="group">
+            <button id="btn-prev" title="Morceau précédent" aria-label="Morceau précédent">⏮</button>
+            <button id="btn-play" title="Lecture / pause" aria-label="Lecture ou pause">⏸</button>
+            <button id="btn-next" title="Morceau suivant" aria-label="Morceau suivant">⏭</button>
+            <span class="sep"></span>
+          </span>
+          <!-- Jamais masquables : c'est le seul chemin de retour vers les réglages. -->
+          <span id="window-actions" class="group">
+            <button id="btn-settings" title="Réglages" aria-label="Réglages">⚙</button>
+            <button id="btn-close" title="Masquer" aria-label="Masquer la fenêtre">✕</button>
+          </span>
+        </div>
+      </header>
+
+      <main id="viewport">
+        <div id="lines"></div>
+        <div id="message">Connexion à YouTube Music Desktop…</div>
+      </main>
+
+      <footer id="foot">
+        <span id="source"></span>
+        <span id="grip" title="Redimensionner"></span>
+      </footer>
+    </div>
+    <script src="pip.js"></script>
+  </body>
+</html>

@@ -1,0 +1,578 @@
+/* Toute l'apparence passe par ces variables, réécrites par applySettings().
+   Les couleurs sont des triplets « R, G, B » pour rester utilisables en rgba(). */
+:root {
+  --bg: 12, 12, 16;
+  --fg: 255, 255, 255;
+  --accent: #ff2e5b;
+  --font-size: 26px;
+  --font-family: "Segoe UI Variable Display", "Segoe UI", Inter, system-ui, sans-serif;
+  --font-weight: 600;
+  --text-align: left;
+  --card-opacity: 0.92;
+  --dim-opacity: 0.32;
+  --radius: 14px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: var(--font-family);
+  color: rgb(var(--fg));
+  cursor: default;
+  user-select: none;
+}
+
+#app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: rgba(var(--bg), var(--card-opacity));
+  border: 1px solid rgba(var(--fg), 0.09);
+  /* Fondu d'escamotage. `opacity` seule : le compositeur s'en charge, sans repeindre. */
+  transition: opacity 0.38s ease;
+  /* Toute la carte sert de zone de déplacement ; les éléments interactifs se ré-excluent. */
+  -webkit-app-region: drag;
+}
+
+/* --------------------------------------------------------------------------
+   Barre supérieure — révélée au survol pour ne pas encombrer l'affichage
+   -------------------------------------------------------------------------- */
+
+#bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  min-height: 34px;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+  background: linear-gradient(rgba(var(--fg), 0.06), rgba(var(--fg), 0));
+}
+
+#app:hover #bar,
+#app:focus-within #bar {
+  opacity: 1;
+}
+
+#app.faded {
+  opacity: 0;
+}
+
+#foot.hidden,
+#source.hidden,
+.group.hidden {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Cadres
+   Tous peints une seule fois par le compositeur. Aucun n'est animé ni recalculé
+   par frame : la boucle de rendu ne touche qu'à la variable --p d'un seul mot.
+   Les pseudo-éléments sont en z-index 3 pour passer au-dessus de #viewport,
+   qui est positionné, et en pointer-events: none pour ne rien intercepter.
+   -------------------------------------------------------------------------- */
+
+#app.frame-aucun {
+  border-color: transparent;
+}
+
+#app.frame-fin {
+  border-color: rgba(var(--fg), 0.09);
+}
+
+#app.frame-lueur {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 16px -3px var(--accent),
+    inset 0 0 24px -16px var(--accent);
+}
+
+#app.frame-double {
+  border-color: rgba(var(--fg), 0.2);
+  box-shadow:
+    inset 0 0 0 4px rgba(var(--bg), 0.95),
+    inset 0 0 0 5px rgba(var(--fg), 0.16);
+}
+
+#app.frame-coins {
+  border-color: transparent;
+}
+
+/* Quatre équerres dessinées en dégradés plats : aucun élément supplémentaire. */
+#app.frame-coins::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  z-index: 3;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-image:
+    linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent)),
+    linear-gradient(var(--accent), var(--accent));
+  background-size:
+    16px 2px, 2px 16px,
+    16px 2px, 2px 16px,
+    16px 2px, 2px 16px,
+    16px 2px, 2px 16px;
+  background-position:
+    left top, left top,
+    right top, right top,
+    left bottom, left bottom,
+    right bottom, right bottom;
+}
+
+#app.frame-ruban {
+  border-color: transparent;
+}
+
+#app.frame-ruban::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: 3;
+  pointer-events: none;
+  background-image: linear-gradient(90deg, var(--accent), rgba(var(--fg), 0.14) 65%, transparent);
+}
+
+#app.frame-scanlines {
+  border-color: rgba(var(--fg), 0.12);
+}
+
+#app.frame-scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    rgba(0, 0, 0, 0) 0 2px,
+    rgba(0, 0, 0, 0.17) 2px 3px
+  );
+}
+
+/* --------------------------------------------------------------------------
+   Cadres animés
+   Contrairement aux précédents, ceux-ci tournent tant que la fenêtre est
+   visible. `lueur-pulse`, `scanlines-anim` et `petales` n'animent que
+   `opacity` et `transform` : le compositeur s'en charge seul, sans repeindre.
+   `balayage` repeint un dégradé conique, d'où sa cadence bridée par `steps()`.
+   -------------------------------------------------------------------------- */
+
+#app.frame-lueur-pulse {
+  border-color: var(--accent);
+}
+
+#app.frame-lueur-pulse::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    0 0 18px -2px var(--accent),
+    inset 0 0 26px -16px var(--accent);
+  animation: pip-pulse 3.2s ease-in-out infinite;
+}
+
+@keyframes pip-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+#app.frame-scanlines-anim {
+  border-color: rgba(var(--fg), 0.12);
+}
+
+/* Débordement de 3 px en haut et en bas : le motif se répète tous les 3 px,
+   translater d'exactement une période donne un défilement sans raccord. */
+#app.frame-scanlines-anim::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -3px;
+  height: calc(100% + 6px);
+  z-index: 3;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    rgba(0, 0, 0, 0) 0 2px,
+    rgba(0, 0, 0, 0.17) 2px 3px
+  );
+  animation: pip-scan 1.4s linear infinite;
+}
+
+@keyframes pip-scan {
+  to {
+    transform: translateY(3px);
+  }
+}
+
+#app.frame-balayage {
+  border-color: transparent;
+}
+
+/* Angle enregistré : sans @property, une variable d'angle ne serait pas
+   interpolable et l'animation ne jouerait pas. */
+@property --pip-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+#app.frame-balayage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  /* 3 px : à 2 px l'anneau est présent mais quasi illisible une fois la fenêtre réduite. */
+  padding: 3px;
+  background-image: conic-gradient(
+    from var(--pip-angle),
+    transparent 0 50%,
+    var(--accent) 78%,
+    transparent 96%
+  );
+  /* Ne conserve que l'anneau de 2 px : deux masques pleins, l'un limité à la
+     zone de contenu, exclus l'un de l'autre. La forme raccourcie fixe à la fois
+     mask-origin et mask-clip, ce que la forme longue ne faisait pas. */
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  /* steps() volontaire : 8 repeints par seconde au lieu de 60, invisible sur
+     une rotation lente et bien moins coûteux. */
+  animation: pip-sweep 5s steps(40) infinite;
+}
+
+@keyframes pip-sweep {
+  to {
+    --pip-angle: 360deg;
+  }
+}
+
+/* Pétales : les seuls éléments réels ajoutés au DOM, et uniquement quand ce
+   cadre est choisi (voir applyFrame). Chacun n'anime que transform et opacity. */
+#petals {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Forme de pétale : deux angles arrondis opposés et un léger dégradé, pour
+   éviter l'aplat qui ressemblait à une pastille. */
+#petals span {
+  position: absolute;
+  top: -16px;
+  width: var(--taille, 10px);
+  height: var(--taille, 10px);
+  border-radius: 78% 12% 78% 12%;
+  background-image: radial-gradient(
+    circle at 30% 25%,
+    rgba(255, 255, 255, 0.75),
+    var(--accent) 62%
+  );
+  opacity: 0;
+  animation-name: pip-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* Le balancement latéral vient des étapes intermédiaires : une chute
+   strictement rectiligne faisait très « pluie ». */
+@keyframes pip-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  10% {
+    opacity: 0.65;
+  }
+  35% {
+    transform: translate3d(16px, calc(var(--fall, 260px) * 0.35), 0) rotate(120deg);
+  }
+  65% {
+    transform: translate3d(-10px, calc(var(--fall, 260px) * 0.65), 0) rotate(240deg);
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(14px, var(--fall, 260px), 0) rotate(380deg);
+  }
+}
+
+/* Respect du réglage système : plus aucune animation de cadre. */
+@media (prefers-reduced-motion: reduce) {
+  #app::before,
+  #app::after,
+  #petals span {
+    animation: none !important;
+  }
+}
+
+#meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#author {
+  color: rgba(var(--fg), 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+#actions button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(var(--fg), 0.7);
+  font-size: 12px;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#actions button:hover {
+  background: rgba(var(--fg), 0.12);
+  color: rgb(var(--fg));
+}
+
+#actions button:active {
+  background: rgba(var(--fg), 0.2);
+}
+
+/* Clic = remise à zéro du décalage du morceau, d'où le curseur pointer. */
+#offset-label {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(var(--fg), 0.45);
+  min-width: 52px;
+  text-align: center;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+#offset-label:hover {
+  color: rgb(var(--fg));
+}
+
+/* Le décalage propre au morceau se distingue du réglage global. */
+#offset-label.per-track {
+  color: var(--accent);
+}
+
+.sep {
+  width: 1px;
+  height: 14px;
+  margin: 0 4px;
+  background: rgba(var(--fg), 0.14);
+}
+
+/* --------------------------------------------------------------------------
+   Paroles
+   -------------------------------------------------------------------------- */
+
+#viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* Fondu haut/bas pour suggérer le défilement sans barre de défilement. */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 14%,
+    #000 86%,
+    transparent 100%
+  );
+}
+
+#lines {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: 0 22px;
+  text-align: var(--text-align);
+  will-change: transform;
+  transition: transform 0.38s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.line {
+  font-size: var(--font-size);
+  line-height: 1.32;
+  font-weight: var(--font-weight);
+  padding: 5px 0;
+  color: rgba(var(--fg), var(--dim-opacity));
+  transition: color 0.22s ease, opacity 0.22s ease;
+  text-wrap: balance;
+}
+
+/* Remplissage karaoké appliqué mot par mot.
+   Un dégradé posé sur la ligne entière serait calculé sur sa boîte : lors d'un
+   retour à la ligne, chaque rangée rejouerait le même dégradé horizontal et
+   se remplirait en même temps que les autres. Un span par mot évite ça —
+   chaque mot tient sur une seule rangée et possède sa propre progression. */
+.line.active .w {
+  background-image: linear-gradient(
+    90deg,
+    var(--accent) var(--p, 0%),
+    rgba(var(--fg), 0.92) var(--p, 0%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Halo sur la ligne chantée. `text-shadow` dessine à partir du contour des
+   glyphes, indépendamment de leur couleur : il fonctionne donc malgré le
+   `color: transparent` du remplissage. Moins coûteux qu'un `filter: drop-shadow`,
+   qui obligerait à recomposer un calque à chaque changement de progression. */
+#app.glow .line.active {
+  text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5);
+}
+
+/* Les symboles d'un passage instrumental sont de vrais spans « mot » (voir
+   buildLine) : ils se remplissent un par un comme le reste des paroles. */
+.line.instrumental .w {
+  font-size: 0.8em;
+  letter-spacing: 0.06em;
+}
+
+/* Paroles non synchronisées : pas de ligne courante, tout est lisible. */
+#lines.plain .line {
+  font-size: calc(var(--font-size) * 0.72);
+  font-weight: 500;
+  color: rgba(var(--fg), 0.78);
+}
+
+#lines.plain {
+  transition: transform 0.6s linear;
+}
+
+#message {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px 26px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(var(--fg), 0.5);
+}
+
+#message.hidden {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Pied de fenêtre
+   -------------------------------------------------------------------------- */
+
+#foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 6px 3px 12px;
+  height: 18px;
+  font-size: 9px;
+  color: rgba(var(--fg), 0.28);
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+#app:hover #foot {
+  opacity: 1;
+}
+
+#source {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Poignée de redimensionnement maison : les bords natifs sont peu fiables
+   sur une fenêtre transparente sans cadre sous Windows. */
+#grip {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  -webkit-app-region: no-drag;
+  background-image: linear-gradient(
+    135deg,
+    transparent 0 42%,
+    rgba(var(--fg), 0.35) 42% 52%,
+    transparent 52% 66%,
+    rgba(var(--fg), 0.35) 66% 76%,
+    transparent 76%
+  );
+}
+
+/* Confirmation visuelle d'un calage : la valeur clignote une fois. */
+#offset-label.flash {
+  color: var(--accent);
+  transition: none;
+}

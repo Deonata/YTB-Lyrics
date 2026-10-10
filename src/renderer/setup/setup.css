@@ -1,0 +1,493 @@
+:root {
+  --bg: #141418;
+  --panel: #1d1d23;
+  --panel-2: #24242c;
+  --fg: #f2f2f5;
+  --dim: #9a9aa6;
+  --line: #2e2e38;
+  --accent: #ff2e5b;
+  --ok: #3ddc84;
+  --warn: #ffb02e;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Ascenseurs discrets : celui du système est large et clair, il jurait avec
+   le fond sombre et sautait aux yeux dans chaque panneau. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a45 transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3a45;
+  border: 3px solid var(--bg);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4b4b58;
+}
+
+/* --------------------------------------------------------------------------
+   Navigation latérale
+   -------------------------------------------------------------------------- */
+
+#tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 10px;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+}
+
+.brand {
+  padding: 2px 8px 14px;
+}
+
+.brand-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.status {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.35;
+}
+
+.status::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--dim);
+  vertical-align: middle;
+}
+
+.status.ok::before {
+  background: var(--ok);
+}
+.status.warn::before {
+  background: var(--warn);
+}
+.status.err::before {
+  background: var(--accent);
+}
+
+.tab {
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: var(--panel);
+  color: var(--fg);
+}
+
+.tab.active {
+  background: var(--panel-2);
+  color: var(--fg);
+}
+
+/* --------------------------------------------------------------------------
+   Panneaux
+   -------------------------------------------------------------------------- */
+
+#content {
+  min-width: 0;
+  overflow-y: auto;
+  /* Aucun contenu ne doit déborder latéralement : la barre horizontale qui
+     apparaissait sinon traversait tous les panneaux. */
+  overflow-x: hidden;
+  padding: 20px 24px 28px;
+}
+
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+h2 {
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  margin-bottom: 10px;
+}
+
+h2.spaced {
+  margin-top: 26px;
+}
+
+.hint {
+  color: var(--dim);
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+
+.hint strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.row label {
+  flex: none;
+  min-width: 128px;
+  color: var(--dim);
+}
+
+.row.colors label {
+  min-width: 0;
+}
+
+.row.colors label:first-child {
+  min-width: 52px;
+}
+
+.row.buttons {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+input[type="text"],
+input[type="number"] {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+}
+
+input.port {
+  flex: none;
+  width: 84px;
+}
+
+input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+input[type="color"] {
+  flex: none;
+  width: 44px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+output {
+  flex: none;
+  width: 74px;
+  text-align: right;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+button {
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--fg);
+  font: inherit;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: #45454f;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+button.danger {
+  color: var(--accent);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cost {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: var(--panel-2);
+  color: var(--dim);
+  font-size: 10px;
+  font-style: normal;
+}
+
+/* --------------------------------------------------------------------------
+   Galeries de vignettes
+   -------------------------------------------------------------------------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.card {
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: #45454f;
+}
+
+.card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Aperçu miniature : reproduit fidèlement les couleurs du thème. */
+.card-preview {
+  position: relative;
+  height: 62px;
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.card-line {
+  height: 5px;
+  border-radius: 3px;
+}
+
+.card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 7px 10px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.card-tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: var(--panel-2);
+  color: var(--dim);
+  font-size: 9px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.card-tag.anim {
+  background: #3a2a12;
+  color: #ffc978;
+}
+
+/* --------------------------------------------------------------------------
+   Notification flottante
+   Hors du flux : afficher un message ne redimensionne plus la zone de contenu,
+   ce qui déplaçait le défilement sous le curseur.
+   -------------------------------------------------------------------------- */
+
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 18px;
+  max-width: min(440px, calc(100% - 220px));
+  padding: 10px 14px;
+  border-radius: 9px;
+  border-left: 3px solid var(--dim);
+  background: var(--panel-2);
+  box-shadow: 0 6px 20px -6px #000;
+  font-size: 12px;
+  opacity: 1;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast.ok {
+  border-left-color: var(--ok);
+}
+
+.toast.err {
+  border-left-color: var(--accent);
+}
+
+/* `visibility` en plus de l'opacité : une fois effacé, il ne doit plus
+   intercepter le moindre clic. */
+.toast.hidden {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+}
+
+.code-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.code-label {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.code {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+}
+
+.steps {
+  margin: 0 0 14px 18px;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.steps li {
+  margin-bottom: 6px;
+}
+
+.steps strong {
+  color: var(--fg);
+}
+
+.steps a {
+  color: var(--accent);
+}
+
+code {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--panel-2);
+  color: var(--fg);
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 11px;
+  user-select: all;
+}
+
+input.keycap {
+  flex: none;
+  width: 96px;
+  text-align: center;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-weight: 650;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+input.keycap.capture {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hidden {
+  display: none;
+}

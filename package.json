@@ -1,0 +1,66 @@
+{
+  "name": "ytm-lyrics-pip",
+  "version": "0.1.0",
+  "description": "Paroles synchronisées en Picture-in-Picture pour YouTube Music Desktop App (ytmdesktop)",
+  "main": "dist/main/index.js",
+  "author": "MRbab",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "watch": "tsc -w -p tsconfig.json",
+    "start": "npm run build && node scripts/start.mjs",
+    "test": "npm run build && node scripts/test-autohide.cjs && node scripts/test-calibration.cjs && electron scripts/test-calage.cjs && node scripts/test-cover.cjs && node scripts/test-lyrics.cjs",
+    "preview": "node scripts/preview-run.mjs",
+    "preview:reglages": "electron scripts/preview-setup.cjs",
+    "calibrer": "node scripts/calibrer-debit.mjs",
+    "icon": "node scripts/make-icon.mjs",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.2"
+  },
+  "build": {
+    "appId": "dev.mrbab.ytmlyricspip",
+    "productName": "YTM Lyrics PiP",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "src/renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "YTM-Lyrics-PiP-${version}-Setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "YTM-Lyrics-PiP-${version}-Portable.${ext}"
+    }
+  }
+}

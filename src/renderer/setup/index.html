@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self';"
+    />
+    <title>YTM Lyrics PiP — Réglages</title>
+    <link rel="stylesheet" href="setup.css" />
+  </head>
+  <body>
+    <nav id="tabs">
+      <div class="brand">
+        <span class="brand-name">YTM Lyrics PiP</span>
+        <span id="status" class="status">Vérification…</span>
+      </div>
+      <button class="tab" data-panel="p-themes">Thèmes</button>
+      <button class="tab" data-panel="p-cadres">Cadres</button>
+      <button class="tab" data-panel="p-texte">Texte &amp; couleurs</button>
+      <button class="tab" data-panel="p-fenetre">Fenêtre</button>
+      <button class="tab" data-panel="p-sync">Synchro</button>
+      <button class="tab" data-panel="p-paroles">Paroles</button>
+      <button class="tab" data-panel="p-connexion">Connexion</button>
+    </nav>
+
+    <main id="content">
+      <!-- ------------------------------------------------------------ -->
+      <section id="p-themes" class="panel">
+        <h2>Thèmes</h2>
+        <p class="hint">
+          Un thème remplit d'un coup les couleurs, la police et le cadre. Tout reste
+          modifiable ensuite dans les autres onglets.
+        </p>
+        <div id="theme-grid" class="grid"></div>
+      </section>
+
+      <!-- ------------------------------------------------------------ -->
+      <section id="p-cadres" class="panel">
+        <h2>Cadre</h2>
+        <p class="hint">
+          Les cadres <strong>statiques</strong> sont dessinés une seule fois : une fois
+          affichés, ils ne coûtent plus rien. Les cadres <strong>animés</strong> tournent en
+          continu tant que la fenêtre est visible — l'indication de coût figure sur chaque
+          vignette. Ils s'arrêtent d'eux-mêmes quand la fenêtre est masquée, et sont
+          désactivés si Windows est réglé sur « animations réduites ».
+        </p>
+        <div id="frame-grid" class="grid frames"></div>
+
+        <label class="check">
+          <input id="textGlow" type="checkbox" />
+          <span>Halo sur la ligne chantée <em class="cost">coût très léger</em></span>
+        </label>
+      </section>
+
+      <!-- ------------------------------------------------------------ -->
+      <section id="p-texte" class="panel">
+        <h2>Texte</h2>
+
+        <div class="row slider">
+          <label for="fontSize">Taille</label>
+          <input id="fontSize" type="range" min="12" max="72" step="1" />
+          <output id="fontSize-out"></output>
+        </div>
+
+        <div class="row">
+          <label for="fontFamily">Police</label>
+          <select id="fontFamily">
+            <option value='"Segoe UI Variable Display", "Segoe UI", Inter, system-ui, sans-serif'>
+              Segoe UI
+            </option>
+            <option value='"Trebuchet MS", "Segoe UI", sans-serif'>Trebuchet MS</option>
+            <option value='Georgia, "Times New Roman", serif'>Georgia (serif)</option>
+            <option value='"Cascadia Mono", Consolas, monospace'>Cascadia Mono</option>
+            <option value='"MS Gothic", "ＭＳ ゴシック", "Yu Gothic", monospace'>MS Gothic</option>
+            <option value='"Arial Black", "Segoe UI", sans-serif'>Arial Black</option>
+            <option value='"Comic Sans MS", "Segoe UI", cursive'>Comic Sans MS</option>
+          </select>
+        </div>
+
+        <div class="row slider">
+          <label for="fontWeight">Graisse</label>
+          <input id="fontWeight" type="range" min="300" max="800" step="100" />
+          <output id="fontWeight-out"></output>
+        </div>
+
+        <div class="row">
+          <label for="textAlign">Alignement</label>
+          <select id="textAlign">
+            <option value="left">À gauche</option>
+            <option value="center">Centré</option>
+            <option value="right">À droite</option>
+          </select>
+        </div>
+
+        <h2 class="spaced">Couleurs</h2>
+
+        <div class="row colors">
+          <label for="accentColor">Accent</label>
+          <input id="accentColor" type="color" />
+          <label for="textColor">Texte</label>
+          <input id="textColor" type="color" />
+          <label for="backgroundColor">Fond</label>
+          <input id="backgroundColor" type="color" />
+        </div>
+
+        <div class="row slider">
+          <label for="opacity">Opacité du fond</label>
+          <input id="opacity" type="range" min="0" max="1" step="0.01" />
+          <output id="opacity-out"></output>
+        </div>
+
+        <div class="row slider">
+          <label for="dimOpacity">Lignes secondaires</label>
+          <input id="dimOpacity" type="range" min="0.05" max="0.9" step="0.01" />
+          <output id="dimOpacity-out"></output>
+        </div>
+
+        <div class="row slider">
+          <label for="cornerRadius">Coins arrondis</label>
+          <input id="cornerRadius" type="range" min="0" max="40" step="1" />
+          <output id="cornerRadius-out"></output>
+        </div>
+
+        <div class="row buttons">
+          <button id="btn-reset-look" class="secondary">Rétablir l'apparence par défaut</button>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ -->
+      <section id="p-fenetre" class="panel">
+        <h2>Éléments affichés au survol</h2>
+
+        <label class="check">
+          <input id="showTitle" type="checkbox" />
+          <span>Titre et artiste</span>
+        </label>
+
+        <label class="check">
+          <input id="showControls" type="checkbox" />
+          <span>Contrôles de lecture (⏮ ⏸ ⏭)</span>
+        </label>
+
+        <label class="check">
+          <input id="showOffset" type="checkbox" />
+          <span>Réglage du décalage (− valeur +)</span>
+        </label>
+
+        <label class="check">
+          <input id="showSource" type="checkbox" />
+          <span>Source des paroles en pied de fenêtre</span>
+        </label>
+
+        <p class="hint">
+          Les boutons <strong>⚙</strong> et <strong>✕</strong> restent toujours visibles au
+          survol : ils sont le seul chemin de retour vers ces réglages depuis la fenêtre.
+        </p>
+
+        <h2 class="spaced">Comportement</h2>
+
+        <label class="check">
+          <input id="autoHideWhenPaused" type="checkbox" />
+          <span>
+            Escamoter la fenêtre pendant les pauses
+            <em class="cost">économise le plus</em>
+          </span>
+        </label>
+
+        <div class="row slider">
+          <label for="autoHideDelaySeconds">Délai avant escamotage</label>
+          <input id="autoHideDelaySeconds" type="range" min="1" max="60" step="1" />
+          <output id="autoHideDelaySeconds-out"></output>
+        </div>
+
+        <p class="hint">
+          La fenêtre disparaît en fondu après ce délai de pause, et revient dès que la
+          musique reprend. C'est l'économie la plus franche&nbsp;: une fenêtre masquée ne
+          rend plus rien du tout, la boucle d'animation est arrêtée et les cadres animés
+          avec elle. Les publicités ne déclenchent pas l'escamotage.
+        </p>
+
+        <label class="check">
+          <input id="clickThrough" type="checkbox" />
+          <span>Verrouiller la fenêtre (les clics passent au travers)</span>
+        </label>
+
+        <label class="check">
+          <input id="pipVisible" type="checkbox" />
+          <span>Afficher la fenêtre PiP</span>
+        </label>
+      </section>
+
+      <!-- ------------------------------------------------------------ -->
+      <section id="p-sync" class="panel">
+        <h2>Synchronisation</h2>
+
+        <p class="hint">
+          Le plus simple : dans la fenêtre PiP, appuie sur <strong>S</strong> (ou le bouton
+          <strong>⏱</strong>) <em>au moment où tu entends une ligne commencer</em>. Le décalage
+          est calculé d'un coup et mémorisé pour ce morceau — inutile de le chercher à coups
+          de ±100 ms. Le temps de réaction est compensé.
+        </p>
+
+        <div class="row slider">
+          <label for="offsetMs">Décalage global</label>
+          <input id="offsetMs" type="range" min="-30000" max="30000" step="100" />
+          <output id="offsetMs-out"></output>
+        </div>
+
+        <p class="hint">
+          Valeur positive = les paroles s'affichent plus tôt. Ce réglage s'applique à
+          <strong>tous</strong> les morceaux : réserve-le à une latence constante de ta
+          configuration. Les touches <strong>[</strong> et <strong>]</strong> dans la fenêtre
+          PiP ajustent au contraire le <strong>morceau courant</strong> seulement — c'est ce
+          qu'il faut quand une version clip décale les paroles. Un clic sur la valeur affichée
+          dans la PiP remet ce morceau à zéro.
+        </p>
+
+        <p id="offset-count" class="hint"></p>
+
+        <h2 class="spaced">Calage</h2>
+
+        <div class="row">
+          <label for="syncKey">Touche de calage</label>
+          <input id="syncKey" type="text" readonly class="keycap" value="S" />
+          <button id="btn-syncKey" class="secondary">Changer</button>
+        </div>
+
+        <label class="check">
+          <input id="autoCalibrate" type="checkbox" />
+          <span>Apprendre le décalage systématique et l'appliquer aux nouveaux morceaux</span>
+        </label>
+
+        <p id="calib-state" class="hint"></p>
+
+        <div class="row buttons">
+          <button id="btn-forget-calib" class="secondary">Oublier ce qui a été appris</button>
+        </div>
+
+        <div class="row buttons">
+          <button id="btn-clear-offsets" class="secondary">
+            Oublier tous les décalages par morceau
+          </button>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ -->
+      <section id="p-paroles" class="panel">
+        <h2>Paroles</h2>
+        <p class="hint">
+          Les paroles viennent de <strong>LRCLIB</strong>, avec <strong>NetEase</strong> en
+          appoint — nettement meilleur sur le japonais, le coréen et le chinois, et parfois
+          horodaté au mot. L'API du Companion Server n'expose pas les paroles natives de
+          YouTube Music. Faute de version synchronisée, l'affichage bascule sur le texte brut
+          défilant.
+        </p>
+        <p class="hint">
+          Le cache s'entretient tout seul au démarrage : les entrées produites par une
+          version antérieure de la recherche sont supprimées, les « pas de paroles » sont
+          réessayés après 24 h, et les plus anciennes entrées sautent au-delà de 1200 fichiers
+          ou 24 Mo. Le bouton ci-dessous ne sert donc qu'à forcer une reprise immédiate.
+        </p>
+        <div class="row buttons">
+          <button id="btn-clear-cache" class="secondary">Vider le cache maintenant</button>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ -->
+      <section id="p-connexion" class="panel">
+        <h2>Source de lecture</h2>
+        <div class="row">
+          <label for="playerSource">Lire les paroles depuis</label>
+          <select id="playerSource">
+            <option value="ytmd">YouTube Music Desktop</option>
+            <option value="spotify">Spotify</option>
+          </select>
+        </div>
+
+        <!-- ---------------------------------------------------------------- -->
+        <div id="src-ytmd">
+          <h2 class="spaced">YouTube Music Desktop</h2>
+          <p class="hint">
+            Dans YTMDesktop&nbsp;: <strong>Settings → Integrations</strong>, active
+            <strong>Companion Server</strong> puis
+            <strong>Enable companion authorization</strong> juste avant d'appairer.
+          </p>
+
+        <div class="row">
+          <label for="host">Hôte</label>
+          <input id="host" type="text" spellcheck="false" value="127.0.0.1" />
+          <label for="port">Port</label>
+          <input id="port" type="number" min="1" max="65535" value="9863" class="port" />
+        </div>
+
+        <div class="row buttons">
+          <button id="btn-probe" class="secondary">Tester le serveur</button>
+          <button id="btn-pair" class="primary">Appairer</button>
+          <button id="btn-unpair" class="danger">Dissocier</button>
+        </div>
+
+          <div id="code-box" class="code-box hidden">
+            <span class="code-label">
+              Vérifie que ce code correspond à celui affiché par YTMDesktop, puis autorise&nbsp;:
+            </span>
+            <span id="code" class="code">····</span>
+          </div>
+        </div>
+
+        <!-- ---------------------------------------------------------------- -->
+        <div id="src-spotify">
+          <h2 class="spaced">Spotify</h2>
+          <p class="hint">
+            Spotify n'expose rien en local&nbsp;: la connexion passe par son API Web, qui
+            exige une application enregistrée. C'est gratuit et à faire une seule fois.
+          </p>
+          <ol class="steps">
+            <li>
+              Ouvre le
+              <a href="https://developer.spotify.com/dashboard" target="_blank"
+                >tableau de bord développeur Spotify</a
+              >, puis <strong>Create app</strong>.
+            </li>
+            <li>
+              Dans <strong>Redirect URIs</strong>, ajoute exactement&nbsp;:
+              <code id="redirect-uri">http://127.0.0.1:8888/callback</code>
+            </li>
+            <li>Coche <strong>Web API</strong>, enregistre, puis copie le <strong>Client ID</strong>.</li>
+          </ol>
+
+          <div class="row">
+            <label for="spotifyClientId">Client ID</label>
+            <input id="spotifyClientId" type="text" spellcheck="false" placeholder="32 caractères" />
+          </div>
+
+          <div class="row buttons">
+            <button id="btn-spotify-connect" class="primary">Connecter Spotify</button>
+            <button id="btn-spotify-disconnect" class="danger">Déconnecter</button>
+          </div>
+
+          <p class="hint">
+            La synchronisation sera un peu moins fine qu'avec YouTube Music Desktop&nbsp;:
+            Spotify ne pousse rien, il faut l'interroger environ une fois par seconde, et la
+            latence réseau s'ajoute. L'horloge locale lisse l'essentiel, mais le décalage par
+            morceau (<strong>[</strong> et <strong>]</strong>) reste utile.
+            Le contrôle de lecture (⏮ ⏸ ⏭) demande un compte <strong>Premium</strong>&nbsp;;
+            l'affichage des paroles fonctionne aussi en gratuit.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Notification flottante : hors du flux, elle ne décale rien et s'efface seule. -->
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <script src="setup.js"></script>
+  </body>
+</html>
