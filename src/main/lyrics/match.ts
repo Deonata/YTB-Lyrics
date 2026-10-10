@@ -293,7 +293,13 @@ export function adjustForCover(
     ...line,
     time: line.time * ratio,
     ...(line.words
-      ? { words: line.words.map((mot) => ({ ...mot, time: mot.time * ratio })) }
+      ? {
+          words: line.words.map((mot) => ({
+            ...mot,
+            time: mot.time * ratio,
+            ...(mot.end !== undefined ? { end: mot.end * ratio } : {}),
+          })),
+        }
       : {}),
   }));
 

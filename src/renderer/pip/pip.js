@@ -61,25 +61,20 @@ let wordTiming = null;
 let activeWordIndex = -2;
 
 /**
- * Cadence de chant, en caractères/seconde, mesurée sur 401 intervalles de
- * paroles réelles (`npm run calibrer`) : médiane 11,8.
- *
- * Attention à ce que ce chiffre décrit : la mesure ne retient que les écarts
- * courts entre lignes, donc elle caractérise les passages **rapides**. C'est une
- * borne haute du débit, pas une moyenne.
+ * Ancre d'horloge : le morceau était à `t` secondes à l'instant `at`
+ * (performance.now). Pendant `slewFor` secondes l'horloge avance à `rate`, le
+ * temps d'absorber un écart, puis reprend la vitesse normale.
  */
-const CHARS_PER_SECOND = 11.8;
-
-/**
- * Une ligne peut se chanter bien plus lentement que cette borne haute — le 1er
- * quartile mesuré tombe à 7,9 car/s, soit une durée une fois et demie plus
- * longue. On autorise donc jusqu'au double de l'estimation avant de considérer
- * que le reste de l'écart est un passage instrumental.
- */
-const SLOW_SINGING_FACTOR = 2;
-
-/** Ancre d'horloge : le morceau était à `t` secondes à l'instant `at` (performance.now). */
 let anchor = null;
+
+/** Au-delà, c'est un saut réel (seek, reprise) : on recale sec. */
+const HARD_RESYNC_SECONDS = 1.2;
+/** En deçà, l'écart est du bruit de mesure : on n'y touche pas. */
+const DEADBAND_SECONDS = 0.03;
+/** Part de l'écart corrigée à chaque mesure, qui filtre la gigue des sources. */
+const CORRECTION_SHARE = 0.5;
+/** Vitesse maximale de rattrapage : ±20 %, invisible sur un remplissage. */
+const MAX_SLEW = 0.2;
 let playing = false;
 let duration = 0;
 let syncVideoId = null;
@@ -105,7 +100,9 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 function rawTime() {
   if (!anchor) return 0;
   if (!playing) return anchor.t;
-  return anchor.t + (performance.now() - anchor.at) / 1000;
+  const elapsed = (performance.now() - anchor.at) / 1000;
+  const slewing = Math.min(elapsed, anchor.slewFor);
+  return anchor.t + slewing * anchor.rate + (elapsed - slewing);
 }
 
 /** Position utilisée pour choisir la ligne, décalages utilisateur inclus. */
@@ -131,7 +128,7 @@ function buildLine(line) {
     spans.push(span);
   };
 
-  if (!line.text) {
+  if (!line.text && !(line.words && line.words.length > 0)) {
     // Passage instrumental : des symboles traités comme des mots, pour qu'ils
     // se remplissent aussi (un pseudo-élément resterait hors du dégradé).
     for (let i = 0; i < 3; i++) {
@@ -139,9 +136,12 @@ function buildLine(line) {
       push('♪');
     }
   } else if (line.words && line.words.length > 0) {
+    // Syllabes d'un même mot et japonais n'ont pas d'espace entre elles.
     line.words.forEach((word, i) => {
-      if (i > 0) p.appendChild(document.createTextNode(' '));
       push(word.text);
+      if (i < line.words.length - 1 && word.space !== false) {
+        p.appendChild(document.createTextNode(' '));
+      }
     });
   } else {
     for (const part of line.text.split(/(\s+)/)) {
@@ -171,7 +171,7 @@ function renderLines() {
   el.message.classList.toggle('hidden', !empty);
   // Indique si le remplissage suit des timings réels ou une estimation : c'est
   // la différence entre un surlignage exact et un surlignage seulement plausible.
-  const motAMot = lyrics.lines.some((line) => line.words);
+  const motAMot = lyrics.lines.some((line) => line.text && line.words && !line.estimated);
   el.source.textContent = lyrics.source
     ? `${lyrics.source} · ${motAMot ? 'horodaté au mot' : 'mots estimés'}`
     : '';
@@ -234,52 +234,36 @@ function scrollPlain() {
   el.lines.style.transform = `translateY(${-frac * overflow}px)`;
 }
 
-/** Calcule les bornes de chaque mot de la ligne `index`. */
+/**
+ * Bornes de chaque mot de la ligne `index`. Le processus principal les a
+ * calculées (timings de la source, ou estimation calibrée) ; à défaut — ancienne
+ * version du principal — la ligne se remplit uniformément jusqu'à la suivante.
+ */
 function computeWordTiming(index) {
   const line = lyrics.lines[index];
   const spans = lineSpans[index];
   if (!line || !spans || spans.length === 0) return null;
 
-  const start = line.time;
-  const next = lyrics.lines[index + 1];
-  const lineEnd = next ? next.time : duration > start ? duration : start + 4;
-  const gap = Math.max(0.4, lineEnd - start);
-
-  // Timings réels fournis par la source : rien à estimer.
   if (line.words && line.words.length === spans.length) {
     const starts = line.words.map((w) => w.time);
-    const ends = starts.map((s, i) =>
-      i + 1 < starts.length ? starts[i + 1] : Math.min(lineEnd, s + 2),
+    const ends = line.words.map((w, i) =>
+      typeof w.end === 'number' ? w.end : (starts[i + 1] ?? w.time + 1),
     );
     return { starts, ends };
   }
 
-  // Sinon : répartition proportionnelle au nombre de caractères.
-  const weights = spans.map((s) => Math.max(1, s.textContent.length));
+  const next = lyrics.lines[index + 1];
+  const lineEnd = next ? next.time : duration > line.time ? duration : line.time + 4;
+  const window = Math.max(0.4, lineEnd - line.time);
+  const weights = spans.map((sp) => Math.max(1, sp.textContent.length));
   const total = weights.reduce((a, b) => a + b, 0);
-
-  // Durée de chant la plus courte plausible pour cette ligne.
-  const chantRapide = 0.35 + total / CHARS_PER_SECOND;
-
-  // On remplit sur tout l'écart jusqu'à la ligne suivante, car c'est la seule
-  // borne sûre : c'est là que la ligne cesse d'être chantée. On ne s'arrête
-  // avant que si l'écart dépasse largement toute vitesse de chant plausible —
-  // signe qu'un passage instrumental suit.
-  //
-  // Prendre systématiquement le minimum des deux, comme je le faisais, revenait
-  // à supposer le débit rapide partout : le remplissage terminait avant la voix
-  // dès qu'une ligne était chantée posément. C'était la cause du surlignage en avance.
-  const window = line.text
-    ? Math.min(gap, chantRapide * SLOW_SINGING_FACTOR)
-    : gap; // passage instrumental : les notes s'étirent sur tout l'écart
-
   const starts = [];
   const ends = [];
   let acc = 0;
   for (const weight of weights) {
-    starts.push(start + window * (acc / total));
+    starts.push(line.time + window * (acc / total));
     acc += weight;
-    ends.push(start + window * (acc / total));
+    ends.push(line.time + window * (acc / total));
   }
   return { starts, ends };
 }
@@ -482,12 +466,27 @@ api.onSync((payload) => {
   const trackChanged = payload.videoId !== syncVideoId;
   syncVideoId = payload.videoId;
 
-  if (estimate === null || trackChanged || Math.abs(payload.progress - estimate) > 1.2) {
-    // Nouveau morceau, seek, ou dérive trop forte : on recale sec.
-    anchor = { t: payload.progress, at: performance.now() };
+  const now = performance.now();
+  const error = estimate === null ? 0 : payload.progress - estimate;
+
+  if (
+    estimate === null ||
+    trackChanged ||
+    !nowPlaying ||
+    !playing ||
+    Math.abs(error) > HARD_RESYNC_SECONDS
+  ) {
+    // Nouveau morceau, seek, pause ou reprise : la position rapportée fait foi.
+    anchor = { t: payload.progress, at: now, rate: 1, slewFor: 0 };
+  } else if (Math.abs(error) < DEADBAND_SECONDS) {
+    // Bruit de mesure : on laisse l'horloge filer, rattrapage en cours compris.
   } else {
-    // Dérive normale : on rattrape 30 % de l'écart pour rester fluide.
-    anchor = { t: estimate + (payload.progress - estimate) * 0.3, at: performance.now() };
+    // Dérive : plutôt qu'un saut (qui ferait reculer un mot à moitié rempli),
+    // on fait varier la vitesse le temps d'absorber une part de l'écart.
+    // L'horloge ne recule jamais : rate reste positif.
+    const correction = error * CORRECTION_SHARE;
+    const slewFor = Math.abs(correction) / MAX_SLEW;
+    anchor = { t: estimate, at: now, rate: 1 + Math.sign(correction) * MAX_SLEW, slewFor };
   }
 
   playing = nowPlaying;

@@ -52,15 +52,27 @@ export interface TrackQuery {
 /** Un mot horodaté, quand la source fournit des timings mot-à-mot (« enhanced LRC »). */
 export interface LyricWord {
   time: number;
+  /** Fin du mot, quand elle est connue : sans elle, un mot finit au début du suivant. */
+  end?: number;
   text: string;
+  /**
+   * `false` quand aucun espace ne suit : syllabes d'un même mot, écritures sans
+   * espaces (japonais, chinois). Absent = un espace suit, ce qui couvre aussi
+   * les entrées mises en cache avant l'apparition de ce champ.
+   */
+  space?: false;
 }
 
 /** Une ligne de paroles horodatée. `time` en secondes depuis le début du morceau. */
 export interface LyricLine {
   time: number;
   text: string;
-  /** Renseigné uniquement si la source horodate chaque mot. */
+  /**
+   * Mots horodatés. Fournis par la source (yrc, LRC « enhanced ») ou, avant
+   * l'envoi à la PiP, estimés à partir de la ligne : `estimated` les distingue.
+   */
   words?: LyricWord[];
+  estimated?: boolean;
 }
 
 export interface LyricsResult {

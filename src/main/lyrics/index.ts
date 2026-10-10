@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { LyricsResult, TrackQuery } from '../../shared/types';
+import type { LyricLine, LyricsResult, TrackQuery } from '../../shared/types';
 import { searchLrclib } from './lrclib';
 import { searchNetease } from './netease';
 import {
@@ -14,6 +14,7 @@ import {
 } from './match';
 
 export { parseLrc, parseYrc, parsePlain } from './lrc';
+export { timeWords } from './words';
 export { cleanArtist, cleanTitle, isCoverTitle, parseCoverTitle } from './match';
 
 /** Durée de vie d'un « pas de paroles » en cache, pour ne pas marteler les sources. */
@@ -25,7 +26,7 @@ const NEGATIVE_TTL_MS = 24 * 60 * 60 * 1000;
  * du filtrage profite ainsi immédiatement, sans purge manuelle — sans quoi une
  * mauvaise correspondance mise en cache resterait servie indéfiniment.
  */
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 
 /** Plafonds au-delà desquels les entrées les plus anciennes sont supprimées. */
 const MAX_CACHE_ENTRIES = 1200;
@@ -69,6 +70,42 @@ function buildCoverTarget(target: MatchTarget): MatchTarget {
   };
 }
 
+const hasRealWords = (result: LyricsResult) =>
+  result.lines.some((line) => line.words && line.words.length > 0 && !line.estimated);
+
+/** Texte réduit à ses lettres et chiffres, pour apparier deux versions d'une même ligne. */
+const lineKey = (text: string) =>
+  text.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]/gu, '');
+
+/** Il faut assez de lignes appariées pour juger, et qu'elles tombent au même moment. */
+const MIN_ALIGNED_LINES = 4;
+const MAX_ALIGNMENT_DRIFT_SECONDS = 0.6;
+
+/**
+ * Deux synchronisations décrivent-elles le même enregistrement ? On apparie les
+ * lignes de même texte (la plus proche dans le temps) et on exige un écart
+ * médian faible : une autre version (radio edit, live) décale tout.
+ */
+export function alignsWith(reference: LyricLine[], candidate: LyricLine[]): boolean {
+  const byKey = new Map<string, number[]>();
+  for (const line of reference) {
+    const key = lineKey(line.text);
+    if (!key) continue;
+    byKey.set(key, [...(byKey.get(key) ?? []), line.time]);
+  }
+
+  const drifts: number[] = [];
+  for (const line of candidate) {
+    const times = byKey.get(lineKey(line.text));
+    if (!times) continue;
+    drifts.push(Math.min(...times.map((t) => Math.abs(t - line.time))));
+  }
+  if (drifts.length < MIN_ALIGNED_LINES) return false;
+
+  drifts.sort((a, b) => a - b);
+  return drifts[Math.floor(drifts.length / 2)]! <= MAX_ALIGNMENT_DRIFT_SECONDS;
+}
+
 /** Interroge les sources dans l'ordre et rend le meilleur résultat trouvé. */
 async function runSources(target: MatchTarget): Promise<{
   result: LyricsResult | null;
@@ -88,7 +125,23 @@ async function runSources(target: MatchTarget): Promise<{
 
     const result = outcome.result;
     if (!result) continue;
-    if (result.kind === 'synced') return { result, sawRejected, instrumental };
+    if (result.kind === 'synced') {
+      // LRCLIB n'horodate presque jamais au mot, NetEase souvent (yrc) : on
+      // tente NetEase, mais on ne garde son mot-à-mot que s'il tombe au même
+      // moment que la synchronisation déjà trouvée.
+      if (search === searchLrclib && !hasRealWords(result)) {
+        const netease = await searchNetease(target).catch(() => null);
+        const precise = netease?.result;
+        if (
+          precise?.kind === 'synced' &&
+          hasRealWords(precise) &&
+          alignsWith(result.lines, precise.lines)
+        ) {
+          return { result: precise, sawRejected, instrumental };
+        }
+      }
+      return { result, sawRejected, instrumental };
+    }
     // On garde le texte brut mais on laisse sa chance à la source suivante,
     // qui a peut-être une version synchronisée.
     if (!plainFallback) plainFallback = result;

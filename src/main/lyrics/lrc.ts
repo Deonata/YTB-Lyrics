@@ -19,8 +19,50 @@ function toSeconds(min: string | undefined, sec: string | undefined, frac: strin
   return Number(min ?? 0) * 60 + Number(sec ?? 0) + Number(f) / 10 ** f.length;
 }
 
-/** Extrait les mots horodatés d'une ligne « enhanced », ou `undefined` s'il n'y en a pas. */
-function parseWordTimings(rest: string, offsetSeconds: number): LyricWord[] | undefined {
+/**
+ * Ajoute un segment de texte horodaté à la liste des mots, en respectant
+ * l'espacement d'origine : un segment sans espace final est une syllabe (ou un
+ * caractère japonais) collée au suivant, pas un mot à part.
+ */
+function pushSegment(words: LyricWord[], raw: string, time: number, end?: number): void {
+  const text = raw.trim();
+  const previous = words[words.length - 1];
+  if (!text) {
+    // Segment blanc : il ne porte qu'un espace, rattaché au mot précédent.
+    if (previous && raw) delete previous.space;
+    return;
+  }
+  if (previous && /^\s/.test(raw)) delete previous.space;
+  const word: LyricWord = { time, text };
+  if (end !== undefined) word.end = end;
+  if (!/\s$/.test(raw)) word.space = false;
+  words.push(word);
+}
+
+/** Le dernier mot n'a rien à suivre : son espacement n'a pas de sens. */
+function finishWords(words: LyricWord[]): LyricWord[] | undefined {
+  if (words.length === 0) return undefined;
+  delete words[words.length - 1]!.space;
+  return words;
+}
+
+/** Recompose le texte d'une ligne à partir de ses mots. */
+export function joinWords(words: LyricWord[]): string {
+  return words
+    .map((w, i) => (i < words.length - 1 && w.space !== false ? `${w.text} ` : w.text))
+    .join('');
+}
+
+/**
+ * Extrait les mots horodatés d'une ligne « enhanced », ou `undefined` s'il n'y
+ * en a pas. Le texte placé avant le premier marqueur commence avec la ligne ;
+ * un marqueur final sans texte donne la fin du dernier mot.
+ */
+function parseWordTimings(
+  rest: string,
+  lineTime: number,
+  offsetSeconds: number,
+): LyricWord[] | undefined {
   WORD_TIMING_RE.lastIndex = 0;
   const markers: Array<{ at: number; length: number; time: number }> = [];
   let match: RegExpExecArray | null;
@@ -34,15 +76,25 @@ function parseWordTimings(rest: string, offsetSeconds: number): LyricWord[] | un
   if (markers.length === 0) return undefined;
 
   const words: LyricWord[] = [];
+  const shift = (t: number) => Math.max(0, t + offsetSeconds);
+
+  const prefix = rest.slice(0, markers[0]!.at);
+  if (prefix.trim()) pushSegment(words, prefix, shift(lineTime));
+
   for (let i = 0; i < markers.length; i++) {
     const marker = markers[i]!;
     // Le texte du mot court jusqu'au marqueur suivant.
-    const end = markers[i + 1]?.at ?? rest.length;
-    const text = rest.slice(marker.at + marker.length, end).trim();
-    if (!text) continue;
-    words.push({ time: Math.max(0, marker.time + offsetSeconds), text });
+    const raw = rest.slice(marker.at + marker.length, markers[i + 1]?.at ?? rest.length);
+    const isLast = i === markers.length - 1;
+    if (isLast && !raw.trim()) {
+      // Marqueur de fin : il borne le dernier mot au lieu d'en ouvrir un.
+      const previous = words[words.length - 1];
+      if (previous) previous.end = shift(marker.time);
+      continue;
+    }
+    pushSegment(words, raw, shift(marker.time));
   }
-  return words.length > 0 ? words : undefined;
+  return finishWords(words);
 }
 
 export function isCreditLine(text: string): boolean {
@@ -85,7 +137,7 @@ export function parseLrc(lrc: string): LyricLine[] {
 
     // Des timings mot-à-mot n'ont de sens que pour une occurrence unique : une ligne
     // à plusieurs timestamps (refrain répété) les rejouerait au mauvais moment.
-    const words = stamps.length === 1 ? parseWordTimings(rest, offsetSeconds) : undefined;
+    const words = stamps.length === 1 ? parseWordTimings(rest, stamps[0]!, offsetSeconds) : undefined;
 
     for (const time of stamps) {
       const line: LyricLine = { time: Math.max(0, time + offsetSeconds), text };
@@ -101,6 +153,8 @@ export function parseLrc(lrc: string): LyricLine[] {
 /**
  * Format « yrc » de NetEase, horodaté au mot :
  * `[débutLigneMs,duréeMs](débutMotMs,duréeMs,0)texte(…)texte`
+ * Un segment est souvent une syllabe : c'est son espace final qui dit si le
+ * mot continue.
  */
 const YRC_LINE_RE = /^\[(\d+),(\d+)\](.*)$/;
 const YRC_WORD_RE = /\((\d+),(\d+),\d+\)([^(]*)/g;
@@ -116,17 +170,19 @@ export function parseYrc(yrc: string): LyricLine[] {
     const head = YRC_LINE_RE.exec(trimmed);
     if (!head) continue;
 
-    const words: LyricWord[] = [];
+    const segments: LyricWord[] = [];
     YRC_WORD_RE.lastIndex = 0;
     let match: RegExpExecArray | null;
     while ((match = YRC_WORD_RE.exec(head[3] ?? '')) !== null) {
-      const text = (match[3] ?? '').trim();
-      if (!text) continue;
-      words.push({ time: Number(match[1]) / 1000, text });
+      const start = Number(match[1]);
+      pushSegment(segments, match[3] ?? '', start / 1000, (start + Number(match[2])) / 1000);
     }
-    if (words.length === 0) continue;
+    const words = finishWords(segments);
+    if (!words) continue;
 
-    const text = words.map((w) => w.text).join(' ');
+    // L'espacement vient du yrc lui-même : « beau|ti|ful » reste un mot, et le
+    // japonais n'est pas éclaté en caractères séparés par des espaces.
+    const text = joinWords(words);
     if (isCreditLine(text)) continue;
 
     lines.push({ time: Number(head[1]) / 1000, text, words });

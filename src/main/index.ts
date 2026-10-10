@@ -10,7 +10,7 @@ import {
 } from './config';
 import { decideAutoHide } from './autohide';
 import { calibrate } from './calibration';
-import { clearLyricsCache, getLyrics, pruneCache } from './lyrics';
+import { clearLyricsCache, getLyrics, pruneCache, timeWords } from './lyrics';
 import { FRAME_STYLES, THEMES } from '../shared/themes';
 import { CompanionError, YtmdClient } from './ytmd';
 import { PearSource } from './players/pear';
@@ -243,7 +243,13 @@ async function handleState(now: NowPlaying): Promise<void> {
   // Le morceau a pu changer pendant la requête réseau : on jette le résultat périmé.
   if (currentVideoId !== now.id) return;
 
-  const payload = { ...pending, lyrics };
+  // Horodatage au mot fait à l'envoi et non à la mise en cache : une meilleure
+  // estimation profite ainsi aussi aux paroles déjà enregistrées.
+  const timed =
+    lyrics.kind === 'synced'
+      ? { ...lyrics, lines: timeWords(lyrics.lines, now.durationSeconds) }
+      : lyrics;
+  const payload = { ...pending, lyrics: timed };
   lastTrackPayload = payload;
   sendToPip('pip:track', payload);
 }

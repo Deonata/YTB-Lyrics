@@ -17,6 +17,8 @@ Module._load = function (request, parent, isMain) {
 const {
   parseLrc,
   parseYrc,
+  timeWords,
+  alignsWith,
   cleanTitle,
   cleanArtist,
   getLyrics,
@@ -89,12 +91,64 @@ const yrcLines = parseYrc(yrc);
 check('parseYrc : lignes JSON et crédits écartés', yrcLines.length, 2);
 check('parseYrc : début de ligne en secondes', yrcLines[0].time, 11.46);
 check('parseYrc : texte recomposé', yrcLines[0].text, 'I do the same');
-check('parseYrc : mots horodatés', yrcLines[0].words, [
-  { time: 11.46, text: 'I' },
-  { time: 11.67, text: 'do' },
-  { time: 11.85, text: 'the' },
-  { time: 11.97, text: 'same' },
+check('parseYrc : mots horodatés, fin comprise', yrcLines[0].words, [
+  { time: 11.46, text: 'I', end: 11.67 },
+  { time: 11.67, text: 'do', end: 11.85 },
+  { time: 11.85, text: 'the', end: 11.97 },
+  { time: 11.97, text: 'same', end: 12.51 },
 ]);
+
+// Un segment yrc sans espace final est une syllabe : le mot continue.
+const syllabes = parseYrc('[1000,1100](1000,300,0)beau(1300,300,0)ti(1600,300,0)ful (1900,200,0)day')[0];
+check('parseYrc : syllabes recollées dans le texte', syllabes.text, 'beautiful day');
+check(
+  'parseYrc : syllabes sans espace entre elles',
+  syllabes.words.map((w) => [w.text, w.space !== false]),
+  [['beau', false], ['ti', false], ['ful', true], ['day', true]],
+);
+const japonais = parseYrc('[18770,1100](18770,730,0)泥(19500,270,0)だ(19770,350,0)ら(20120,360,0)け')[0];
+check('parseYrc : japonais sans espaces parasites', japonais.text, '泥だらけ');
+
+// --- LRC « enhanced » : texte avant le premier marqueur, marqueur de fin, syllabes ---
+const prefixe = parseLrc('[00:10.00]Hello <00:10.50>world<00:11.20>')[0];
+check('parseLrc : texte avant le 1er marqueur gardé', prefixe.words.map((w) => w.text), ['Hello', 'world']);
+check('parseLrc : il démarre avec la ligne', prefixe.words[0].time, 10);
+check('parseLrc : marqueur final = fin du dernier mot', prefixe.words[1].end, 11.2);
+const enhSyll = parseLrc('[00:10.00]<00:10.00>beau<00:10.30>ti<00:10.60>ful')[0];
+check('parseLrc : syllabes enhanced', [enhSyll.text, enhSyll.words.length, enhSyll.words[0].space], ['beautiful', 3, false]);
+
+// --- Horodatage au mot avant envoi ---
+const proche = (a, b) => Math.abs(a - b) < 0.005;
+const estimees = timeWords(
+  [
+    { time: 0, text: 'un deux trois' },
+    { time: 3, text: '' },
+    { time: 9, text: 'こんにちは' },
+    { time: 12, text: 'vrai mot', words: [{ time: 12, text: 'vrai' }, { time: 12.4, end: 13, text: 'mot' }] },
+  ],
+  20,
+);
+const [l0, l1, l2, l3] = estimees;
+check('timeWords : ligne estimée découpée', [l0.estimated, l0.words.map((w) => w.text)], [true, ['un', 'deux', 'trois']]);
+// 11 caractères → fenêtre 0,35 + 11/7 = 1,921 s, bien en deçà de l'écart de 3 s.
+check('timeWords : fenêtre de chant calibrée', proche(l0.words[2].end, 0.35 + 11 / 7), true);
+// Poids 2, 4 et 5×2 : le dernier mot, tenu, prend la plus grosse part.
+check('timeWords : dernier mot tenu plus longtemps', proche(l0.words[2].time, (0.35 + 11 / 7) * 6 / 16), true);
+check('timeWords : passage instrumental sur tout l’écart', [l1.words.length, proche(l1.words[2].end, 9)], [3, true]);
+check('timeWords : japonais découpé par caractère', [l2.words.length, l2.words[0].space], [5, false]);
+check('timeWords : mots réels gardés, fin complétée', [l3.estimated, l3.words[0].end, l3.words[1].end], [undefined, 12.4, 13]);
+check(
+  'timeWords : sans source de mots, le libellé reste « estimé »',
+  estimees.filter((l) => l.text && !l.estimated).length,
+  1,
+);
+
+// --- Alignement de deux synchronisations ---
+const ref = ['Un', 'Deux', 'Trois', 'Quatre', 'Cinq'].map((text, i) => ({ time: 10 + i * 4, text }));
+const decale = (d) => ref.map((l) => ({ ...l, text: l.text.toUpperCase() + ' !', time: l.time + d }));
+check('alignsWith : même version, ponctuation et casse ignorées', alignsWith(ref, decale(0.3)), true);
+check('alignsWith : autre version (décalée de 2 s) refusée', alignsWith(ref, decale(2)), false);
+check('alignsWith : trop peu de lignes communes pour juger', alignsWith(ref.slice(0, 3), decale(0).slice(0, 3)), false);
 
 // --- Lignes de crédits dans un LRC classique (fréquentes chez NetEase) ---
 const avecCredits = parseLrc(
