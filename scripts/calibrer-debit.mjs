@@ -7,7 +7,7 @@
  * écarts courts — ceux où le chant occupe manifestement tout l'intervalle, sans
  * passage instrumental — le rapport caractères/écart approche la cadence réelle.
  */
-const UA = 'YTM-Lyrics-PiP/0.1.0 (calibration)';
+const UA = 'YTM-Lyrics-PiP/0.2.0 (calibration)';
 
 const MORCEAUX = [
   ['Daft Punk', 'Get Lucky'],

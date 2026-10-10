@@ -1,7 +1,7 @@
 {
   "name": "ytm-lyrics-pip",
-  "version": "0.1.0",
-  "description": "Paroles synchronisées en Picture-in-Picture pour YouTube Music Desktop App (ytmdesktop)",
+  "version": "0.2.0",
+  "description": "Paroles synchronisées mot par mot en Picture-in-Picture pour YouTube Music (YTMDesktop, Pear Desktop) et Spotify",
   "main": "dist/main/index.js",
   "author": "MRbab",
   "license": "MIT",

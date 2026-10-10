@@ -12,7 +12,7 @@ import {
 } from './match';
 
 const BASE = 'https://lrclib.net/api';
-const USER_AGENT = 'YTM-Lyrics-PiP/0.1.0 (https://github.com/MRbab/ytm-lyrics-pip)';
+const USER_AGENT = 'YTM-Lyrics-PiP/0.2.0 (https://github.com/Deonata/YTB-Lyrics)';
 
 interface LrclibRecord {
   id: number;
