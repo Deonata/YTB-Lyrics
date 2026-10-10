@@ -6,9 +6,11 @@ const handlers = {};
 const { parseYrc } = require('../dist/main/lyrics/lrc.js');
 const { timeWords } = require('../dist/main/lyrics/words.js');
 
+// Paroles fictives, écrites pour l'aperçu : les captures du README sont publiques.
+
 // Ligne yrc découpée en syllabes, pour voir l'espacement réel à l'écran.
 const [syllabes] = parseYrc(
-  '[26000,3000](26000,400,0)Beau(26400,300,0)ti(26700,500,0)ful (27200,400,0)ev(27600,300,0)ery(27900,300,0)thing (28200,800,0)now',
+  '[26000,3000](26000,500,0)Lu(26500,400,0)miè(26900,400,0)re (27300,300,0)du (27600,1400,0)soir',
 );
 
 // Comme le processus principal : l'horodatage au mot est fait avant l'envoi.
@@ -17,10 +19,10 @@ const LYRICS = {
   source: 'Aperçu local',
   lines: timeWords(
     [
-      { time: 4, text: 'Une ligne courte avant' },
-      { time: 10, text: 'I never thought that I would end up ruining it forever' },
+      { time: 4, text: 'On roule sans savoir où la nuit nous mène' },
+      { time: 10, text: "Les néons s'allument un à un sur la ville encore endormie" },
       { time: 16, text: '' }, // passage instrumental de 6 s
-      { time: 22, text: 'Et la ligne suivante arrive' },
+      { time: 22, text: "Et la radio fredonne ce qu'on n'ose pas dire" },
       syllabes,
     ],
     200,
@@ -29,8 +31,8 @@ const LYRICS = {
 
 const TRACK = {
   videoId: 'preview',
-  title: 'Aperçu',
-  author: 'Rendu local',
+  title: 'Néons',
+  author: 'Démo · paroles fictives',
   album: null,
   thumbnail: null,
   lyrics: LYRICS,
