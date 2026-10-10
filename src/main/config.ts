@@ -15,12 +15,17 @@ const MAX_TRACK_OFFSETS = 400;
 
 export interface Config {
   /** Source de lecture active. */
-  playerSource: 'ytmd' | 'spotify';
+  playerSource: 'ytmd' | 'spotify' | 'pear';
 
   // YouTube Music Desktop
   host: string;
   port: number;
   token: string | null;
+
+  // Pear Desktop — plugin « API Server ». Le JWT rendu à l'appairage n'expire pas.
+  pearHost: string;
+  pearPort: number;
+  pearToken: string | null;
 
   // Spotify — l'identifiant client est public par construction dans le flux PKCE.
   spotifyClientId: string | null;
@@ -95,6 +100,10 @@ const DEFAULTS: Config = {
   host: '127.0.0.1',
   port: 9863,
   token: null,
+
+  pearHost: '127.0.0.1',
+  pearPort: 26538,
+  pearToken: null,
 
   spotifyClientId: null,
   spotifyRefreshToken: null,

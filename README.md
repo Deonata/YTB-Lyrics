@@ -11,6 +11,7 @@ en cours du morceau joué dans YTMDesktop, avec remplissage progressif façon ka
 | Source | Transport | Sync | Contrôles |
 | --- | --- | --- | --- |
 | **YouTube Music Desktop** | Socket.IO, poussé | ~1 push/s | Oui |
+| **Pear Desktop** | WebSocket, poussé | à chaque mouvement de la barre de progression, et à chaque saut | Oui |
 | **Spotify** | API Web, sondée | ~1 requête/s en lecture, 1/5 s en pause | Premium seulement |
 
 Spotify n'expose rien en local : la connexion passe par son API Web en OAuth
@@ -97,6 +98,27 @@ npm start
    dans YTMDesktop. Tu as 30 secondes.
 
 Le jeton est stocké dans `%APPDATA%/ytm-lyrics-pip/config.json`.
+
+## Pear Desktop
+
+[Pear Desktop](https://github.com/pear-devs/pear-desktop) (anciennement
+`th-ch/youtube-music`) se branche par son plugin **API Server** (REST +
+WebSocket, port 26538 par défaut) :
+
+1. Dans Pear : menu **Plugins → API Server**, coche **Enabled**. Laisse
+   l'authentification sur **Auth at first** et, de préférence, l'hôte sur
+   `127.0.0.1` (par défaut il écoute tout le réseau local).
+2. Dans les réglages de l'app, onglet *Connexion*, source **Pear Desktop**, puis
+   **Appairer**.
+3. Pear ouvre une boîte de dialogue pour le client `ytmlyricspip` : autorise.
+
+Le jeton rendu n'expire pas ; il est stocké dans le même `config.json`. Si Pear
+perd la configuration du plugin, il change de clé de signature : l'app affiche
+alors « réappairer » au lieu de boucler en reconnexion. Pear ne signale pas les
+publicités (il embarque son propre bloqueur).
+
+`electron scripts/test-pear.cjs` rejoue le protocole du plugin (v3.12.0) contre
+un faux serveur : appairage, amorçage, messages, commandes, coupure, jeton refusé.
 
 ## Utilisation
 

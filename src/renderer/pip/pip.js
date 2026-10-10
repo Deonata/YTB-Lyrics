@@ -189,11 +189,11 @@ function statusMessage() {
     case 'connected':
       return 'En attente de lecture…';
     case 'connecting':
-      return 'Connexion à YouTube Music Desktop…';
+      return 'Connexion au lecteur…';
     case 'unauthorized':
       return status.message || 'Application non appairée. Ouvre les réglages.';
     default:
-      return status.message || 'YouTube Music Desktop est introuvable.';
+      return status.message || 'Lecteur introuvable. Ouvre les réglages.';
   }
 }
 

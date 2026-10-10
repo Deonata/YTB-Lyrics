@@ -272,6 +272,7 @@
           <label for="playerSource">Lire les paroles depuis</label>
           <select id="playerSource">
             <option value="ytmd">YouTube Music Desktop</option>
+            <option value="pear">Pear Desktop</option>
             <option value="spotify">Spotify</option>
           </select>
         </div>
@@ -303,6 +304,31 @@
               Vérifie que ce code correspond à celui affiché par YTMDesktop, puis autorise&nbsp;:
             </span>
             <span id="code" class="code">····</span>
+          </div>
+        </div>
+
+        <!-- ---------------------------------------------------------------- -->
+        <div id="src-pear">
+          <h2 class="spaced">Pear Desktop</h2>
+          <p class="hint">
+            Dans Pear&nbsp;: menu <strong>Plugins → API Server</strong>, coche
+            <strong>Enabled</strong>. Laisse l'authentification sur
+            <strong>Auth at first</strong>&nbsp;: Pear demandera une seule fois d'autoriser
+            l'application. Règle de préférence l'hôte du plugin sur
+            <strong>127.0.0.1</strong>&nbsp;: par défaut il écoute tout le réseau local.
+          </p>
+
+          <div class="row">
+            <label for="pearHost">Hôte</label>
+            <input id="pearHost" type="text" spellcheck="false" value="127.0.0.1" />
+            <label for="pearPort">Port</label>
+            <input id="pearPort" type="number" min="1" max="65535" value="26538" class="port" />
+          </div>
+
+          <div class="row buttons">
+            <button id="btn-pear-probe" class="secondary">Tester le serveur</button>
+            <button id="btn-pear-pair" class="primary">Appairer</button>
+            <button id="btn-pear-unpair" class="danger">Dissocier</button>
           </div>
         </div>
 

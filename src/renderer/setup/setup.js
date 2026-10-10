@@ -27,6 +27,12 @@ const els = {
   playerSource: $('playerSource'),
   srcYtmd: $('src-ytmd'),
   srcSpotify: $('src-spotify'),
+  srcPear: $('src-pear'),
+  pearHost: $('pearHost'),
+  pearPort: $('pearPort'),
+  pearProbe: $('btn-pear-probe'),
+  pearPair: $('btn-pear-pair'),
+  pearUnpair: $('btn-pear-unpair'),
   redirectUri: $('redirect-uri'),
   spotifyClientId: $('spotifyClientId'),
   spotifyConnect: $('btn-spotify-connect'),
@@ -82,12 +88,19 @@ for (const tab of document.querySelectorAll('.tab')) {
 // Affichage
 // ---------------------------------------------------------------------------
 
+const SOURCE_LABELS = {
+  ytmd: 'YouTube Music Desktop',
+  pear: 'Pear Desktop',
+  spotify: 'Spotify',
+};
+
 function setStatus(status) {
+  const label = SOURCE_LABELS[els.playerSource.value] ?? SOURCE_LABELS.ytmd;
   const map = {
-    connected: ['ok', 'Connecté à YouTube Music Desktop.'],
+    connected: ['ok', `Connecté à ${label}.`],
     connecting: ['warn', 'Connexion en cours…'],
     unauthorized: ['err', status.message || 'Application non appairée.'],
-    disconnected: ['err', status.message || 'YouTube Music Desktop est introuvable.'],
+    disconnected: ['err', status.message || `${label} est introuvable.`],
   };
   const [cls, text] = map[status.state] ?? ['', 'État inconnu.'];
   els.status.className = `status ${cls}`;
@@ -396,9 +409,10 @@ els.unpair.addEventListener('click', async () => {
 // Source de lecture
 // ---------------------------------------------------------------------------
 
-/** N'affiche que le bloc de la source retenue : les deux ne servent jamais ensemble. */
+/** N'affiche que le bloc de la source retenue : elles ne servent jamais ensemble. */
 function showSource(id) {
   els.srcYtmd.classList.toggle('hidden', id !== 'ytmd');
+  els.srcPear.classList.toggle('hidden', id !== 'pear');
   els.srcSpotify.classList.toggle('hidden', id !== 'spotify');
 }
 
@@ -406,10 +420,62 @@ els.playerSource.addEventListener('change', async () => {
   const id = els.playerSource.value;
   showSource(id);
   await api.setSource(id);
+  setMessage(`Source basculée sur ${SOURCE_LABELS[id] ?? id}.`, 'ok');
+});
+
+// ---------------------------------------------------------------------------
+// Pear Desktop
+// ---------------------------------------------------------------------------
+
+function pearEndpoint() {
+  return {
+    host: els.pearHost.value.trim() || '127.0.0.1',
+    port: Number(els.pearPort.value) || 26538,
+  };
+}
+
+function setPearUi(paired) {
+  els.pearPair.textContent = paired ? 'Réappairer' : 'Appairer';
+  els.pearUnpair.disabled = !paired;
+}
+
+els.pearProbe.addEventListener('click', async () => {
+  const { host, port } = pearEndpoint();
+  els.pearProbe.disabled = true;
+  setMessage('Test en cours…', null, true);
+  const res = await api.pearProbe(host, port);
+  els.pearProbe.disabled = false;
   setMessage(
-    id === 'spotify'
-      ? 'Source basculée sur Spotify.'
-      : 'Source basculée sur YouTube Music Desktop.',
+    res.ok ? `API Server de Pear détecté sur ${host}:${port}.` : res.error || 'Serveur injoignable.',
+    res.ok ? 'ok' : 'err',
+  );
+});
+
+els.pearPair.addEventListener('click', async () => {
+  const { host, port } = pearEndpoint();
+  els.pearPair.disabled = true;
+  els.pearProbe.disabled = true;
+  setMessage('Autorise « ytmlyricspip » dans la fenêtre que Pear vient d’ouvrir…', null, true);
+
+  const res = await api.pearPair(host, port);
+
+  els.pearPair.disabled = false;
+  els.pearProbe.disabled = false;
+  if (res.ok) {
+    els.playerSource.value = 'pear';
+    showSource('pear');
+    setPearUi(true);
+    setMessage('Pear Desktop est appairé. La fenêtre PiP se remplira dès la prochaine lecture.', 'ok');
+  } else {
+    setMessage(res.error || "Échec de l'appairage.", 'err');
+  }
+});
+
+els.pearUnpair.addEventListener('click', async () => {
+  await api.pearUnpair();
+  setPearUi(false);
+  setMessage(
+    'Jeton supprimé. Pear n’a pas de menu pour révoquer un client : « ytmlyricspip » reste autorisé dans la configuration du plugin.',
     'ok',
   );
 });
@@ -463,16 +529,24 @@ api.getSnapshot().then((snap) => {
   applySnapshot(snap.settings, snap.pipVisible);
   setPairedUi(snap.hasToken);
   setOffsetCount(snap.trackOffsetCount ?? 0);
-  setStatus(snap.status);
 
   els.playerSource.value = snap.playerSource ?? 'ytmd';
   showSource(els.playerSource.value);
+  setStatus(snap.status);
+  els.pearHost.value = snap.pearHost ?? '127.0.0.1';
+  els.pearPort.value = String(snap.pearPort ?? 26538);
+  setPearUi(Boolean(snap.pearConnected));
   els.redirectUri.textContent = snap.spotifyRedirectUri ?? '';
   els.spotifyClientId.value = snap.spotifyClientId ?? '';
   setSpotifyUi(Boolean(snap.spotifyConnected));
 
   // Rien de configuré : la connexion est la seule chose à faire, on y ouvre directement.
-  const pret = snap.playerSource === 'spotify' ? snap.spotifyConnected : snap.hasToken;
+  const pret =
+    snap.playerSource === 'spotify'
+      ? snap.spotifyConnected
+      : snap.playerSource === 'pear'
+        ? snap.pearConnected
+        : snap.hasToken;
   showPanel(pret ? 'p-themes' : 'p-connexion');
 });
 

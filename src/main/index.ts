@@ -13,6 +13,7 @@ import { calibrate } from './calibration';
 import { clearLyricsCache, getLyrics, pruneCache } from './lyrics';
 import { FRAME_STYLES, THEMES } from '../shared/themes';
 import { CompanionError, YtmdClient } from './ytmd';
+import { PearSource } from './players/pear';
 import { SpotifySource, REDIRECT_URI } from './players/spotify';
 import { YtmdSource } from './players/ytmd-source';
 import type { NowPlaying, PlayerSource } from './players/types';
@@ -39,7 +40,7 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let tray: Tray | null = null;
-/** Source de lecture active : YouTube Music Desktop ou Spotify. */
+/** Source de lecture active : YouTube Music Desktop, Pear Desktop ou Spotify. */
 let source: PlayerSource | null = null;
 
 /** Durée du fondu côté renderer ; on attend qu'il se joue avant de retirer la fenêtre. */
@@ -256,7 +257,9 @@ function useSource(): void {
   source?.stop();
   source?.removeAllListeners();
 
-  source = getConfig().playerSource === 'spotify' ? new SpotifySource() : new YtmdSource();
+  const id = getConfig().playerSource;
+  source =
+    id === 'spotify' ? new SpotifySource() : id === 'pear' ? new PearSource() : new YtmdSource();
 
   source.on('now', (now) => {
     void handleState(now);
@@ -422,6 +425,9 @@ function registerIpc(): void {
       spotifyClientId: c.spotifyClientId ?? '',
       spotifyConnected: Boolean(c.spotifyRefreshToken),
       spotifyRedirectUri: REDIRECT_URI,
+      pearHost: c.pearHost,
+      pearPort: c.pearPort,
+      pearConnected: Boolean(c.pearToken),
     };
   });
 
@@ -477,6 +483,37 @@ function registerIpc(): void {
     sendToSetup('setup:status', lastStatus);
   });
 
+  // --- Pear Desktop ---
+
+  ipcMain.handle('setup:pear-probe', async (_e, host: string, port: number) => {
+    try {
+      await new PearSource(host, port).probe();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('setup:pear-pair', async (_e, host: string, port: number) => {
+    updateConfig({ pearHost: host, pearPort: port });
+    try {
+      // Bloque jusqu'à la réponse dans la boîte de dialogue de Pear.
+      const pearToken = await new PearSource(host, port).requestToken();
+      updateConfig({ pearToken, playerSource: 'pear' });
+      flushConfig();
+      useSource();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('setup:pear-unpair', () => {
+    updateConfig({ pearToken: null });
+    flushConfig();
+    useSource();
+  });
+
   // --- Spotify ---
 
   ipcMain.handle('setup:spotify-connect', async (_e, clientId: string) => {
@@ -500,7 +537,7 @@ function registerIpc(): void {
     useSource();
   });
 
-  ipcMain.handle('setup:set-source', (_e, playerSource: 'ytmd' | 'spotify') => {
+  ipcMain.handle('setup:set-source', (_e, playerSource: 'ytmd' | 'spotify' | 'pear') => {
     updateConfig({ playerSource });
     flushConfig();
     useSource();

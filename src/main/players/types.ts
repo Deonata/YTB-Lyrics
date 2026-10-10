@@ -2,7 +2,7 @@ import type { EventEmitter } from 'node:events';
 import type { ConnectionStatus, PlayerCommand } from '../../shared/types';
 
 /** Identifiant de la source de lecture. */
-export type PlayerSourceId = 'ytmd' | 'spotify';
+export type PlayerSourceId = 'ytmd' | 'spotify' | 'pear';
 
 /**
  * État de lecture, normalisé pour être indépendant de la source.
