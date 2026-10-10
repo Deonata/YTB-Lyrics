@@ -3,15 +3,28 @@ const { contextBridge } = require('electron');
 
 const handlers = {};
 
+const { parseYrc } = require('../dist/main/lyrics/lrc.js');
+const { timeWords } = require('../dist/main/lyrics/words.js');
+
+// Ligne yrc découpée en syllabes, pour voir l'espacement réel à l'écran.
+const [syllabes] = parseYrc(
+  '[26000,3000](26000,400,0)Beau(26400,300,0)ti(26700,500,0)ful (27200,400,0)ev(27600,300,0)ery(27900,300,0)thing (28200,800,0)now',
+);
+
+// Comme le processus principal : l'horodatage au mot est fait avant l'envoi.
 const LYRICS = {
   kind: 'synced',
   source: 'Aperçu local',
-  lines: [
-    { time: 4, text: 'Une ligne courte avant' },
-    { time: 10, text: 'I never thought that I would end up ruining it forever' },
-    { time: 16, text: '' }, // passage instrumental de 6 s
-    { time: 22, text: 'Et la ligne suivante arrive' },
-  ],
+  lines: timeWords(
+    [
+      { time: 4, text: 'Une ligne courte avant' },
+      { time: 10, text: 'I never thought that I would end up ruining it forever' },
+      { time: 16, text: '' }, // passage instrumental de 6 s
+      { time: 22, text: 'Et la ligne suivante arrive' },
+      syllabes,
+    ],
+    200,
+  ),
 };
 
 const TRACK = {

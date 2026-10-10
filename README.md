@@ -11,6 +11,7 @@ en cours du morceau joué dans YTMDesktop, avec remplissage progressif façon ka
 | Source | Transport | Sync | Contrôles |
 | --- | --- | --- | --- |
 | **YouTube Music Desktop** | Socket.IO, poussé | ~1 push/s | Oui |
+| **Pear Desktop** | WebSocket, poussé | à chaque mouvement de la barre de progression, et à chaque saut | Oui |
 | **Spotify** | API Web, sondée | ~1 requête/s en lecture, 1/5 s en pause | Premium seulement |
 
 Spotify n'expose rien en local : la connexion passe par son API Web en OAuth
@@ -41,9 +42,12 @@ YTMDesktop ──Companion Server──> app compagnon ──> fenêtre PiP alwa
 
 Le serveur ne pousse la progression qu'environ **une fois par seconde**, ce qui est
 trop grossier pour surligner ligne par ligne. Le renderer maintient donc une horloge
-locale (ancre + `performance.now()`), recalée en douceur (30 % de l'écart) à chaque
-mise à jour et resynchronisée sèchement en cas de saut réel (seek, changement de
-morceau, dérive > 1,2 s).
+locale (ancre + `performance.now()`). À chaque mise à jour, elle absorbe la moitié
+de l'écart **en changeant de vitesse** (±20 % au plus) plutôt qu'en sautant : elle ne
+recule jamais, donc un mot à moitié rempli ne se vide plus. Les écarts sous 30 ms
+sont ignorés (bruit de mesure). Elle se recale sèchement en cas de saut réel (seek,
+changement de morceau, pause, reprise, dérive > 1,2 s). `electron
+scripts/test-horloge.cjs` le vérifie sur le vrai renderer.
 
 ### Remplissage mot par mot
 
@@ -56,19 +60,24 @@ Quand la source fournit des timings mot-à-mot — LRC *enhanced* (`<mm:ss.xx>`)
 `yrc` de NetEase — ils sont utilisés tels quels. Le pied de la fenêtre indique
 « horodaté au mot » ou « mots estimés », pour savoir quand la précision est réelle.
 
-Sinon, la durée de la ligne est répartie entre les mots au prorata de leur nombre de
-caractères. La borne de temps retenue est **l'écart jusqu'à la ligne suivante**,
-seule limite sûre : c'est là que la ligne cesse d'être chantée. On ne s'arrête avant
-que si cet écart dépasse le double d'une durée de chant plausible — signe qu'un
-passage instrumental suit.
+L'espacement de la source est respecté : un segment `yrc` sans espace final est une
+syllabe (« beau|ti|ful » reste un mot qui se remplit syllabe par syllabe), et le
+japonais n'est pas éclaté en caractères séparés par des espaces. Quand LRCLIB n'a
+que des lignes, NetEase est aussi interrogé : son `yrc` n'est retenu que si ses
+lignes tombent au même moment (écart médian ≤ 0,6 s sur au moins 4 lignes
+communes) — sinon c'est une autre version de l'enregistrement.
 
-`scripts/calibrer-debit.mjs` (`npm run calibrer`) mesure la cadence de chant sur de
-vraies paroles synchronisées : sur 401 intervalles, médiane **11,8 caractères/s**,
-1er quartile 7,9. Cette mesure ne retient que les écarts courts, donc elle décrit les
-passages rapides — c'est une borne haute, d'où le facteur 2 avant de conclure à un
-silence. Prendre systématiquement le minimum entre écart et estimation, comme dans
-une version antérieure, revenait à supposer le débit rapide partout : le remplissage
-terminait avant la voix sur toute ligne chantée posément.
+Sinon, les mots sont estimés dans le processus principal (`src/main/lyrics/words.ts`),
+juste avant l'envoi : au prorata de leurs caractères, le **dernier mot comptant
+double** (il est presque toujours tenu), sur une durée de chant de
+`0,35 s + caractères / 7`, bornée par l'écart jusqu'à la ligne suivante. Les blocs
+japonais ou chinois sont découpés par caractère.
+
+Ces paramètres viennent de `npm run calibrer:mots`, qui mesure l'estimation contre le
+mot-à-mot réel de NetEase (20 morceaux, ~5 900 débuts de mots, surtout en anglais) :
+erreur médiane **253 → 191 ms**, moyenne 431 → 340 ms, 43 % des mots à 150 ms près
+au lieu de 35 %. Le gain tient en validation croisée (chaque moitié du corpus réglée
+sur l'autre). Le français n'y figure pas : NetEase n'a presque pas de `yrc` français.
 
 Les passages instrumentaux (lignes vides du LRC) affichent `♪ ♪ ♪`, eux aussi rendus
 comme des mots pour qu'ils se remplissent. Ceux-là s'étirent en revanche sur **tout**
@@ -97,6 +106,27 @@ npm start
    dans YTMDesktop. Tu as 30 secondes.
 
 Le jeton est stocké dans `%APPDATA%/ytm-lyrics-pip/config.json`.
+
+## Pear Desktop
+
+[Pear Desktop](https://github.com/pear-devs/pear-desktop) (anciennement
+`th-ch/youtube-music`) se branche par son plugin **API Server** (REST +
+WebSocket, port 26538 par défaut) :
+
+1. Dans Pear : menu **Plugins → API Server**, coche **Enabled**. Laisse
+   l'authentification sur **Auth at first** et, de préférence, l'hôte sur
+   `127.0.0.1` (par défaut il écoute tout le réseau local).
+2. Dans les réglages de l'app, onglet *Connexion*, source **Pear Desktop**, puis
+   **Appairer**.
+3. Pear ouvre une boîte de dialogue pour le client `ytmlyricspip` : autorise.
+
+Le jeton rendu n'expire pas ; il est stocké dans le même `config.json`. Si Pear
+perd la configuration du plugin, il change de clé de signature : l'app affiche
+alors « réappairer » au lieu de boucler en reconnexion. Pear ne signale pas les
+publicités (il embarque son propre bloqueur).
+
+`electron scripts/test-pear.cjs` rejoue le protocole du plugin (v3.12.0) contre
+un faux serveur : appairage, amorçage, messages, commandes, coupure, jeton refusé.
 
 ## Utilisation
 

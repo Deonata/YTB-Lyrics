@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { ConnectionStatus, PipSettings } from '../shared/types';
 import type { FrameOption, PipTheme } from '../shared/themes';
+import type { PlayerSourceId } from '../main/players/types';
 
 export interface SetupSnapshot {
   host: string;
@@ -12,11 +13,14 @@ export interface SetupSnapshot {
   themes: PipTheme[];
   frames: FrameOption[];
   trackOffsetCount: number;
-  playerSource: 'ytmd' | 'spotify';
+  playerSource: PlayerSourceId;
   spotifyClientId: string;
   spotifyConnected: boolean;
   /** À déclarer tel quel dans le tableau de bord Spotify. */
   spotifyRedirectUri: string;
+  pearHost: string;
+  pearPort: number;
+  pearConnected: boolean;
 }
 
 export interface PairResult {
@@ -34,12 +38,19 @@ const api = {
     ipcRenderer.invoke('setup:pair', host, port),
   unpair: (): Promise<void> => ipcRenderer.invoke('setup:unpair'),
   /** Bascule la source de lecture et rebranche l'application dessus. */
-  setSource: (source: 'ytmd' | 'spotify'): Promise<'ytmd' | 'spotify'> =>
+  setSource: (source: PlayerSourceId): Promise<PlayerSourceId> =>
     ipcRenderer.invoke('setup:set-source', source),
   /** Ouvre le navigateur pour l'autorisation Spotify ; se résout au retour. */
   spotifyConnect: (clientId: string): Promise<PairResult> =>
     ipcRenderer.invoke('setup:spotify-connect', clientId),
   spotifyDisconnect: (): Promise<void> => ipcRenderer.invoke('setup:spotify-disconnect'),
+  /** Vérifie que le plugin « API Server » de Pear répond, sans jeton. */
+  pearProbe: (host: string, port: number): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('setup:pear-probe', host, port),
+  /** Demande un jeton ; se résout quand l'utilisateur a répondu dans Pear. */
+  pearPair: (host: string, port: number): Promise<PairResult> =>
+    ipcRenderer.invoke('setup:pear-pair', host, port),
+  pearUnpair: (): Promise<void> => ipcRenderer.invoke('setup:pear-unpair'),
   onCode: (cb: (code: string) => void) => {
     ipcRenderer.on('setup:code', (_e, code: string) => cb(code));
   },
