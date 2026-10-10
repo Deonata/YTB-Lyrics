@@ -64,21 +64,18 @@ modifié dans le lecteur.
 
 ## Installation
 
-L'app est développée et testée sous **Windows**.
+L'app est développée et testée sous **Windows** (64 bits).
 
-**Depuis les sources** (Node.js 20+ et npm) :
-
-```bash
-npm install
-npm start
-```
-
-**En exécutable** : `npm run dist` produit deux fichiers dans `release/` :
+**Télécharger** : la dernière version est sur la page
+[**Releases**](https://github.com/Deonata/YTB-Lyrics/releases/latest), en deux formats :
 
 | Fichier | Usage |
 | --- | --- |
 | `YTM-Lyrics-PiP-<version>-Portable.exe` | Un seul exécutable, rien à installer : le plus simple à partager |
 | `YTM-Lyrics-PiP-<version>-Setup.exe` | Installeur classique, avec choix du dossier et raccourci sur le bureau |
+
+**Depuis les sources** (Node.js 20+ et npm) : `npm install` puis `npm start`.
+`npm run dist` construit les deux exécutables dans `release/`.
 
 > **Les exécutables ne sont pas signés.** Au premier lancement, Windows SmartScreen
 > affiche « Windows a protégé votre ordinateur » : *Informations complémentaires* →

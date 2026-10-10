@@ -5,7 +5,7 @@ import type { ConnectionStatus, PlayerCommand, YtmdState } from '../shared/types
 /** Contraintes du serveur : appId minuscule alphanumérique 2-32, appVersion en semver. */
 export const APP_ID = 'ytmlyricspip';
 export const APP_NAME = 'YTM Lyrics PiP';
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';
 
 /** Codes d'erreur renvoyés par le Companion Server, traduits pour l'UI. */
 const ERROR_MESSAGES: Record<string, string> = {
