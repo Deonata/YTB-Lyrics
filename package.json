@@ -14,6 +14,7 @@
     "test": "npm run build && node scripts/test-autohide.cjs && node scripts/test-calibration.cjs && electron scripts/test-calage.cjs && node scripts/test-cover.cjs && node scripts/test-lyrics.cjs && electron scripts/test-pear.cjs && electron scripts/test-horloge.cjs",
     "preview": "node scripts/preview-run.mjs",
     "preview:reglages": "electron scripts/preview-setup.cjs",
+    "captures": "node scripts/captures-readme.mjs",
     "calibrer": "node scripts/calibrer-debit.mjs",
     "calibrer:mots": "node scripts/calibrer-mots.mjs",
     "icon": "node scripts/make-icon.mjs",

@@ -12,11 +12,18 @@ const OUT = process.env.PREVIEW_OUT || path.join(ROOT, 'preview');
 // Une capture par processus : recharger une seconde fenêtre dans le même
 // processus fait échouer loadFile (ERR_FAILED).
 const MOMENT = Number(process.env.PREVIEW_AT || '11.5');
+// PREVIEW_SIZE=520x220 : taille de la fenêtre (défaut : 300x210).
+const [WIDTH, HEIGHT] = (process.env.PREVIEW_SIZE || '300x210').split('x').map(Number);
+
+// PREVIEW_SCALE=2 : captures nettes pour un écran haute densité (README).
+if (process.env.PREVIEW_SCALE) {
+  app.commandLine.appendSwitch('force-device-scale-factor', process.env.PREVIEW_SCALE);
+}
 
 async function capture(at) {
   const win = new BrowserWindow({
-    width: 300,
-    height: 210,
+    width: WIDTH,
+    height: HEIGHT,
     frame: false,
     show: false,
     backgroundColor: '#101014',
@@ -64,15 +71,22 @@ async function capture(at) {
     console.log(JSON.stringify(await win.webContents.executeJavaScript(probe), null, 2));
 
     // Survol réel : c'est le sélecteur :hover qu'on veut éprouver, pas une simulation CSS.
-    win.webContents.sendInputEvent({ type: 'mouseEnter', x: 150, y: 100 });
-    win.webContents.sendInputEvent({ type: 'mouseMove', x: 150, y: 100 });
+    win.webContents.sendInputEvent({ type: 'mouseEnter', x: WIDTH / 2, y: HEIGHT / 2 });
+    win.webContents.sendInputEvent({ type: 'mouseMove', x: WIDTH / 2, y: HEIGHT / 2 });
     await new Promise((r) => setTimeout(r, 400));
     console.log('--- avec survol ---');
     console.log(JSON.stringify(await win.webContents.executeJavaScript(probe), null, 2));
   }
 
+  // PREVIEW_HOVER=1 : survol réel, qui fait apparaître titre et commandes.
+  if (process.env.PREVIEW_HOVER) {
+    win.webContents.sendInputEvent({ type: 'mouseEnter', x: WIDTH / 2, y: HEIGHT / 2 });
+    win.webContents.sendInputEvent({ type: 'mouseMove', x: WIDTH / 2, y: HEIGHT / 2 });
+    await new Promise((r) => setTimeout(r, 400));
+  }
+
   const image = await win.webContents.capturePage();
-  const label = process.env.PREVIEW_THEME || `${at}s`;
+  const label = process.env.PREVIEW_LABEL || process.env.PREVIEW_THEME || `${at}s`;
   const file = path.join(OUT, `pip-${label}.png`);
   fs.writeFileSync(file, image.toPNG());
   console.log(`capturé ${file}`);

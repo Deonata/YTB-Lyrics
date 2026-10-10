@@ -7,8 +7,13 @@ const path = require('node:path');
 const fs = require('node:fs');
 
 const ROOT = path.join(__dirname, '..');
-const OUT = path.join(ROOT, 'preview');
+const OUT = process.env.PREVIEW_OUT || path.join(ROOT, 'preview');
 const PANEL = process.env.PREVIEW_PANEL || 'p-themes';
+
+// PREVIEW_SCALE=2 : captures nettes pour un écran haute densité (README).
+if (process.env.PREVIEW_SCALE) {
+  app.commandLine.appendSwitch('force-device-scale-factor', process.env.PREVIEW_SCALE);
+}
 
 app.whenReady().then(async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -42,7 +47,8 @@ app.whenReady().then(async () => {
   console.log(`${PANEL} → débord horizontal : ${debord.scrollWidth - debord.clientWidth}px`);
 
   const image = await win.webContents.capturePage();
-  fs.writeFileSync(path.join(OUT, `reglages-${PANEL}.png`), image.toPNG());
-  console.log(`capturé reglages-${PANEL}.png`);
+  const label = process.env.PREVIEW_LABEL || `reglages-${PANEL}`;
+  fs.writeFileSync(path.join(OUT, `${label}.png`), image.toPNG());
+  console.log(`capturé ${label}.png`);
   app.exit(0);
 });
